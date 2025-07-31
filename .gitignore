@@ -1,0 +1,35 @@
+# Temporary Access lock files
+*.laccdb
+*.ldb
+
+# Backup files created by Access or editors
+*.bak
+*.backup
+*.tmp
+~$*
+
+# Access-generated compiled code
+*.accde
+*.accdr
+*.accdc
+
+# Ignore personal/workspace files (Windows/Office)
+*.user
+*.suo
+*.lnk
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# GitHub Desktop and JetBrains-style logs
+.idea/
+.vscode/
+*.log
+
+
+# Ignore full data dumps unless committed intentionally
+*.csv
+*.xlsx
+
+# Ignore VBA crash reports (if any)
+*.crash
