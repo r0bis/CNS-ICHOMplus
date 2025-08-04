@@ -4,9 +4,9 @@ This document summarises the _scoring_ approaches used for the questionnaires in
 
 
 
-## (DERS-18)
+## (DERS-16)
 
-**Name:** Difficulties in Emotion Regulation Scale 18-item version (DERS-18)
+**Name:** Difficulties in Emotion Regulation Scale 16-item version (DERS-16)
 
 **Timeframe** covered in questions: unspecified/general
 
@@ -14,7 +14,8 @@ This document summarises the _scoring_ approaches used for the questionnaires in
 
 *	Scoring presented as total score
   *	Add together the scores from all items (ranging 1 - 5, where 1 = "almost never", and 5 = "almost always")
-  *	Higher scores indicate more difficulties with emotion regulation 
+  *	Higher scores indicate more difficulties with emotion regulation (forward scoring)
+    *	The latter is different from DERS-18 that had also two reverse scored items  
 
 #### Sub-scales
 
