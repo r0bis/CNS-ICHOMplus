@@ -2,7 +2,7 @@ Attribute VB_Name = "tech"
 ' this module is for some technical procedures that help in development
 
 
-Public Sub printTabeFields()
+Public Sub printTableFields()
 ' prints table fields and descriptions in Immediate window
 ' depends on function HasProperty()
 ' change table name in recordset open line

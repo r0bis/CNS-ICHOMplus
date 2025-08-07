@@ -9,6 +9,8 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Compare Database
 
+Public PendingQuestionType As String
+
 Private Sub cmbAnswer_AfterUpdate()
     ' Save the record
     If Me.Dirty Then Me.Dirty = False
@@ -18,6 +20,17 @@ Private Sub cmbAnswer_AfterUpdate()
     Me.Parent.lstCurrQuestionnaire.Requery
 End Sub
 
+
+Private Sub cmbAnswer_BeforeUpdate(Cancel As Integer)
+
+End Sub
+
+Private Sub Form_BeforeUpdate(Cancel As Integer)
+    Debug.Print "SUBFRM: BeforeUpdate  fired at " & Now & " RecordID: " & Nz(Me.ID, "Null") & " Dirty = " & Me.Dirty
+    
+    CleanDataEntryFields Me
+
+End Sub
 
 Private Sub Form_Load()
 ' hide fields upon first loading (caused by main form)
@@ -52,15 +65,29 @@ End Sub
 
 Public Sub LoadQuestion(questionType As String)
 ' loads the question answers in the subform (Me)
-    ' Debug.Print "LD: Loading Question ->"
+     Debug.Print "LD: QType -> " & questionType
+     Debug.Print "LD: NewRecord = " & Me.NewRecord & " Dirty = " & Me.Dirty
+     
+     Debug.Print "LD: fkQuestion=" & Nz(Me.fkQuestion, "Null"), _
+            "fkPatient=" & Nz(Me.fkPatient, "Null"), _
+            "responseDate=" & Nz(Me.responseDate, "Null"), _
+            "RecordID=" & Nz(Me!ID, "Null")
+    Debug.Print "LD: Record count in recordset: " & Me.Recordset.RecordCount
+     
     ' Debug.Print "LD: NewRecord: " & Me.NewRecord & ", Dirty: " & Me.Dirty & ", fkQuestion: " & Nz(Me.fkQuestion, "null")
     
     ' INSERT new record and set the correct answerID
-    Call PreloadSubformRecord
+    ' Call PreloadSubformRecord
 
     ' if there was a new record, now it is Me.MewRecord = FALSE
     ' so we can proceed with an existing record from here
     ' PreloadSubformRecord made sure of that
+    
+    If Me.Recordset.RecordCount = 0 Then
+        Debug.Print "LD: No record loaded in subform — should not happen now"
+        Exit Sub
+    End If
+    
     
     Dim rs As DAO.Recordset
     Dim sql As String
@@ -81,9 +108,11 @@ Public Sub LoadQuestion(questionType As String)
     qID = Nz(Me.fkQuestion, 0)
     pID = Nz(Me.fkPatient, 0)
     rDate = Nz(Me.responseDate, Date) ' or use Me.txtSelectedDate from main form
+    
+    Debug.Print "LD: key fields are: qID = " & Nz(qID, "Null") & " pID = " & Nz(pID, "Null") & " rDate: " & rDate & " Record ID = " & Nz(Me!ID, "Null")
 
     If qID = 0 Or pID = 0 Or IsNull(rDate) Then
-        Debug.Print "LD: Skipping LoadQuestion — one or more key fields not ready yet"
+        Debug.Print "LD: Skipping LoadQuestion — key fields not ready yet: qID = " & Nz(qID, "Null") & " pID = " & Nz(pID, "Null") & " Record ID = " & Nz(Me!ID, "Null")
         Exit Sub
     End If
     
@@ -170,7 +199,7 @@ Public Sub LoadQuestion(questionType As String)
     End Select
 
     ' ? Requery listbox on parent (if it shows live changes)
-    ' Debug.Print "LD: Load finished -> requery listBox"
+    Debug.Print "LD: Load finished -> requery listBox"
     Me.Parent.lstCurrQuestionnaire.Requery
 
 End Sub
@@ -184,7 +213,7 @@ End Sub
 
 Private Sub PreloadSubformRecord()
 ' if new record needed, run this
-
+    Debug.Print "PRL: entering preload"
     Dim qID As Long, pID As Long
     Dim rDate As Date
     
@@ -193,6 +222,10 @@ Private Sub PreloadSubformRecord()
     pID = Nz(Me.Parent.cmbPatient, 0)
     rDate = Nz(Me.Parent.txtSelectedDate, Date)
     ' Only runs if subform is on a new record
+    
+    Sleep 200
+    Debug.Print "PRL: start Q: " & qID & " P: " & pID & " rDate: " & rDate
+    
     
     If DCount("*", "data", _
         "fkQuestion = " & Nz(Me.fkQuestion, 0) & _
@@ -204,7 +237,7 @@ Private Sub PreloadSubformRecord()
 
     ' Defensive check - how can it be we don't have a question or the patient?
     If qID = 0 Or pID = 0 Then
-        Debug.Print "PRL: Missing qID or pID — skipping preload"
+        Debug.Print "PRL: Missing qID or pID — skipping preload: Q: " & qID & " P: " & pID
         Exit Sub
     End If
 
@@ -213,8 +246,8 @@ Private Sub PreloadSubformRecord()
         "fkQuestion = " & qID & _
         " AND fkPatient = " & pID & _
         " AND responseDate = #" & Format(rDate, "mm\/dd\/yyyy") & "#") > 0 Then
-        Debug.Print "PRL: Matching record already exists — skip preload"
-        Exit Sub
+            Debug.Print "PRL: Matching record exists — skip preload Q: " & Nz(Me!fkQuestion, "non") & " P: " & Nz(Me!fkPatient, "non") & " D: " & Nz(Me!responseDate, "non ") & " Record ID: " & Nz(Me!ID, "null")
+            Exit Sub
     End If
 
     ' Populate required fields in (Me) record set
@@ -241,7 +274,7 @@ Private Sub PreloadSubformRecord()
 
     ' Commit record (it will now exist in the data table)
     Me.Dirty = False
-    ' Debug.Print "PRL: Preloaded new record: q=" & qID & ", p=" & pID & ", a=" & Me.fkAnswer
+    Debug.Print "PRL: Preloaded new record: q=" & qID & ", p=" & pID & ", a=" & Me.fkAnswer
     
 End Sub
 
@@ -251,6 +284,76 @@ Private Sub txtVAS_KeyDown(KeyCode As Integer, Shift As Integer)
         ' Move focus explicitly (or ignore)
         ' prevents inserting a new record just based on VAS focus + Enter accident
     End If
+End Sub
+
+
+
+Private Sub Form_Current()
+    If Me.Recordset.RecordCount > 0 Then
+        If Len(PendingQuestionType) > 0 Then
+            LoadQuestion PendingQuestionType
+            PendingQuestionType = "" ' clear so it only runs once
+        End If
+    End If
+End Sub
+
+Public Sub PreloadSubformRecordDirect(qID As Long, pID As Long, rDate As Date)
+    Debug.Print "DIRECT PRELOAD: starting, Q=" & qID & " P=" & pID & " D=" & rDate
+    On Error GoTo ErrHandler
+
+    Dim rs As DAO.Recordset
+    Dim qType As String
+    Dim answerSetID As Long
+    Dim defaultAnswerID As Long
+
+    ' Look up question type and answer set
+    qType = Nz(DLookup("questionType", "questions", "ID = " & qID), "")
+    answerSetID = Nz(DLookup("fkAnswerSet", "questions", "ID = " & qID), 0)
+
+    ' Decide default answer
+    Select Case qType
+        Case "Binary", "Likert", "Ordinal"
+            defaultAnswerID = 91
+
+        Case "Text", "Numeric", "VAS"
+            If answerSetID <> 0 Then
+                Dim rsAns As DAO.Recordset
+                Set rsAns = CurrentDb.OpenRecordset( _
+                    "SELECT ID FROM answers " & _
+                    "WHERE fkAnswerSet = " & answerSetID & " " & _
+                    "ORDER BY [order] ASC", dbOpenSnapshot)
+                If Not rsAns.EOF Then
+                    defaultAnswerID = rsAns!ID
+                Else
+                    defaultAnswerID = 0
+                End If
+                rsAns.Close
+            Else
+                defaultAnswerID = 0
+            End If
+
+        Case Else
+            defaultAnswerID = 0
+    End Select
+
+    Debug.Print "DIRECT PRELOAD: inserting record with defaultAnswerID=" & defaultAnswerID
+
+    ' Insert record
+    Set rs = CurrentDb.OpenRecordset("data", dbOpenDynaset)
+    rs.AddNew
+    rs!fkQuestion = qID
+    rs!fkPatient = pID
+    rs!responseDate = rDate
+    rs!fkAnswer = defaultAnswerID
+    rs.Update
+    rs.Close
+
+    Debug.Print "DIRECT PRELOAD: finished OK"
+    Exit Sub
+
+ErrHandler:
+    Debug.Print "DIRECT PRELOAD: error " & Err.Number & " - " & Err.Description
+    Resume Next
 End Sub
 
 

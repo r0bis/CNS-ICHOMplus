@@ -185,48 +185,35 @@ Private Sub cmbQuestionnaire_AfterUpdate()
 End Sub
 
 Private Sub lstCurrQuestionnaire_AfterUpdate()
-' after user selcts an item (question) displayed in the listBox
-' calls the subform procedure to populate the question response
-
-' note the odd quirk with subform holder control name:
-' subAnswerPanel__
-' at some point editing the form access refused to not have __
-' at the end of the name of the control
-    
-    Dim qType As String
     Dim qID As Long
-    qType = Me.lstCurrQuestionnaire.Column(2)
+    Dim pID As Long
+    Dim rDate As Date
+    
     qID = Me.lstCurrQuestionnaire.Column(0)
-
-    ' Let subform sync after disabling me
-    Me.lstCurrQuestionnaire.Enabled = False
-    DoEvents
-    'Sleep 200
-
-    Dim needsLoading As Boolean
-    needsLoading = True
-
+    pID = Me.cmbPatient
+    rDate = Me.txtSelectedDate
+    
+    
+    ' Store type for subform display logic
+    Me.subAnswerPanel__.Form.PendingQuestionType = Me.lstCurrQuestionnaire.Column(2)
+    
+    ' Check if record exists in the table
     If DCount("*", "data", _
         "fkQuestion = " & qID & _
-        " AND fkPatient = " & Me.cmbPatient & _
-        " AND responseDate = #" & Format(Me.txtSelectedDate, "mm\/dd\/yyyy") & "#") = 0 Then
-        needsLoading = True
-    ElseIf qType = "Text" Or qType = "VAS" Or qType = "Numeric" Then
-        needsLoading = True
+        " AND fkPatient = " & pID & _
+        " AND responseDate = #" & Format(rDate, "mm\/dd\/yyyy") & "#") = 0 Then
+        
+        Debug.Print "MAIN: Preloading DIRECT from listbox AfterUpdate"
+        Me.subAnswerPanel__.Form.PreloadSubformRecordDirect qID, pID, rDate
     End If
 
-    If needsLoading Then
-        ' Debug.Print "MAIN: Calling LoadQuestion"
-        Me.subAnswerPanel__.Form.LoadQuestion qType
-    Else
-        Debug.Print "MAIN: Record already present, no LoadQuestion needed"
-        Me.lstCurrQuestionnaire.Requery
-    End If
+
     
-    'Sleep 200
-    Me.lstCurrQuestionnaire.Enabled = True ' enable myself after processing done
-
+    ' Refresh subform so it shows the correct record
+    Me.subAnswerPanel__.Requery
+    Debug.Print "Main listBox AfterUpdate finished!!!"
 End Sub
+
 
 
 Private Sub lstCurrQuestionnaire_BeforeUpdate(Cancel As Integer)
@@ -343,8 +330,8 @@ Private Sub FilterList()
         .Requery
     End With
         
-    Debug.Print "list count:"; Me.lstCurrQuestionnaire.ListCount
-    Debug.Print sql
+    Debug.Print "MAIN: listBox count:"; Me.lstCurrQuestionnaire.ListCount
+    'Debug.Print sql
         
 End Sub
 

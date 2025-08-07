@@ -91,3 +91,70 @@ Public Function IsDevAuthorized() As Boolean
     End If
 End Function
 
+'--- Get the field type for a bound control ---
+' we get the bound (table) field type
+
+Private Function GetFieldType(frm As Form, ctrl As Control) As Long
+    Dim rs As DAO.Recordset
+    Dim fld As DAO.Field
+    
+    On Error Resume Next
+    If Len(ctrl.ControlSource) > 0 Then
+        Set rs = frm.RecordsetClone
+        Set fld = rs.Fields(ctrl.ControlSource)
+        GetFieldType = fld.Type   ' DAO DataTypeEnum constant
+    End If
+    On Error GoTo 0
+End Function
+
+'--- Clean a single bound control based on its field type ---
+Private Sub CleanFieldToNullByType(frm As Form, ctrl As Control)
+    Dim fldType As Long
+    fldType = GetFieldType(frm, ctrl)
+    
+    ' If no type found, skip (unbound or not in recordset)
+    If fldType = 0 Then Exit Sub
+    
+    Select Case fldType
+        ' Text and Memo (Long Text) fields
+        Case dbText, dbMemo
+            If Trim(Nz(ctrl.Value, "")) = "" Then
+                ctrl.Value = Null
+            End If
+        
+        ' All numeric field types
+        Case dbByte, dbInteger, dbLong, dbSingle, dbDouble, dbCurrency, dbDecimal
+            If Trim(Nz(ctrl.Value, "")) = "" Then
+                ctrl.Value = Null
+            End If
+        
+        ' Other types (Date/Time, Yes/No, etc.) — ignored
+        Case Else
+            ' do nothing
+    End Select
+End Sub
+
+'--- Loop through relevant bound controls and clean them ---
+' we only operate on controls bound to specific table fields CONST
+Public Sub CleanDataEntryFields(frm As Form)
+    Dim ctl As Control
+    Dim fieldName As String
+    Debug.Print "start field processing from BeforeUpdate - only for text control fields updated "
+    
+    ' Only clean these three bound fields in the data table
+    Const FIELDS_TO_CLEAN As String = "|numericValue|vasValue|freeText|"
+    
+    For Each ctl In frm.Controls
+        'we only check text boxes
+        If ctl.ControlType = acTextBox Then
+            If Len(ctl.ControlSource) > 0 And Nz(ctl.Value, "") <> Nz(ctl.OldValue, "") Then
+                fieldName = ctl.ControlSource
+                ' Only clean if the bound field is in our list
+                If InStr(1, FIELDS_TO_CLEAN, "|" & fieldName & "|", vbTextCompare) > 0 Then
+                    Debug.Print "entering field processing for " & fieldName
+                    CleanFieldToNullByType frm, ctl
+                End If
+            End If
+        End If
+    Next ctl
+End Sub
