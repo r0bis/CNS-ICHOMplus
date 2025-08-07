@@ -188,31 +188,31 @@ Private Sub lstCurrQuestionnaire_AfterUpdate()
     Dim qID As Long
     Dim pID As Long
     Dim rDate As Date
+    Dim qType As String
     
     qID = Me.lstCurrQuestionnaire.Column(0)
     pID = Me.cmbPatient
     rDate = Me.txtSelectedDate
+    qType = Me.lstCurrQuestionnaire.Column(2)
     
-    
-    ' Store type for subform display logic
-    Me.subAnswerPanel__.Form.PendingQuestionType = Me.lstCurrQuestionnaire.Column(2)
-    
-    ' Check if record exists in the table
+    '--- Ensure record exists ---
     If DCount("*", "data", _
         "fkQuestion = " & qID & _
         " AND fkPatient = " & pID & _
         " AND responseDate = #" & Format(rDate, "mm\/dd\/yyyy") & "#") = 0 Then
-        
+    ' so - if not wxist -> create one in preload Direct
         Debug.Print "MAIN: Preloading DIRECT from listbox AfterUpdate"
         Me.subAnswerPanel__.Form.PreloadSubformRecordDirect qID, pID, rDate
     End If
 
+    ' --- Pass qType to subform ---
+    Me.subAnswerPanel__.Form.PendingQuestionType = qType
 
-    
-    ' Refresh subform so it shows the correct record
+    ' Refresh subform so it loads the record
     Me.subAnswerPanel__.Requery
-    Debug.Print "Main listBox AfterUpdate finished!!!"
+    Debug.Print "MAIN: listBox AfterUpdate finished!"
 End Sub
+
 
 
 
